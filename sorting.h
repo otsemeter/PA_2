@@ -13,5 +13,3 @@ void quickSort(long* arr, int size);
 void mergeSort(long* arr, int size);
 
 #endif
-
-void printArr(long* arr, int size);
