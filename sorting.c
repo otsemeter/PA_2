@@ -1,11 +1,13 @@
 //preprocessor directives
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
 #include "sorting.h"
 
 //helper function declarations
 void swap(long * arr, int i, int j);
+void copy(long * arr, long * dest, int lb, int ub);
+void quickSort_notail(long * arr, int lb, int ub);
 
 /* swaps two elements in array arr*/
 void swap(long * arr, int i, int j)
@@ -13,6 +15,13 @@ void swap(long * arr, int i, int j)
     long temp = arr[i];
     arr[i] = arr[j];
     arr[j] = temp;
+}
+
+/*  copy elements from arr to dest*/
+void copy(long * arr, long * dest, int lb, int ub)
+{
+    memcpy(dest, arr, sizeof(long) * (ub - lb + 1));
+
 }
 
 /*  array print function
@@ -29,7 +38,7 @@ void printArr(long* arr, int size)
     printf("\n");
 }
 
-/*  partition usgin Hoare's partition scheme
+/*  partition using Lomuto's partition scheme
     
     inputs: long * arr, int lb int ub
     
@@ -37,49 +46,40 @@ void printArr(long* arr, int size)
     lb: lower bound of array
     ub: upper bound of array
     
-    instance variables: long pivot_el, int i, int j, int n
+    instance variables: long pivot_el, int pivot_idx
     
     pivot_el: stores last element chosen as pivot element
-    i: index of left most element greater than or equal to pivot_el
-    j: index of right most element less than or equal to pivot_el
-    n: loop control variable
-    
+    pivot_idx: variable to hold pivot index
+
     functionality:
     
-    loop until the indices of i and j meet
-    loop i from last i to next index greater than or equal to pivot el
-    loop j from last j to next index less than or equal to pivot el
-    check if i and j met
-    swap i and j
-    results in all elements less than pivot_el on the left of pivot_el, and all elements greater than pivot_el on the right of pivot_el
+    loop from lb to ub - 1
+    check if element at index i is less than the pivot element
+    if true, itterate the pivot index and swap the current element
+    with the element at the new pivot index
+    exit loop
+    itterate pivot index once more
+    and do one final swap
+    result sin all elements less than pivot_el on the left of pivot_el, and vise versa
+    return the pivot index
 */
 int partition(long* arr, int lb, int ub)
 {
-    long pivot_el = arr[lb];
-    int i = lb - 1;
-    int j = ub + 1;
-    int n = 0;
-    while(n == 0)
+    if(ub < lb)
+        return -1;
+    long pivot_el = arr[ub];
+    int pivot_idx = lb - 1;
+    for(int i = lb; i < ub; i++)
     {
-        do
+        if(arr[i] <= pivot_el)
         {
-            i += 1;
-        }while(arr[i] < pivot_el);
-
-        do
-        {
-            j -= 1;
-        }while(arr[j] > pivot_el);
-
-        if(i >= j)
-        {
-            printf("\npivot_idx: %d", j);
-            printArr(arr, ub + 1);
-            return j;  
+            pivot_idx += 1;
+            swap(arr, i, pivot_idx);
         }
-        swap(arr, i, j);
     }
-    
+    pivot_idx += 1;
+    swap(arr, ub, pivot_idx);
+    return pivot_idx;
 }
 
 /*  quickSort
@@ -100,15 +100,30 @@ int partition(long* arr, int lb, int ub)
 */
 void quickSort(long* arr, int size)
 {
+    quickSort_notail(arr, 0, size - 1);
+}
+
+/*  recursive quicksort function with 
+    tail recursion eliminated
+*/
+void quickSort_notail(long * arr, int lb, int ub)
+{
     int pivot_idx;
-
-    while(size > 1)
-    {    
-        pivot_idx = partition(arr, 0, size - 1);
-        quickSort(arr + pivot_idx + 1, size - pivot_idx - 1);
-        size = pivot_idx + 1;
+    while(lb < ub)
+    {
+        pivot_idx = partition(arr, lb, ub);
+        
+        if(pivot_idx < (lb + ub) / 2)
+        {
+            quickSort_notail(arr, lb, pivot_idx - 1);
+            lb = pivot_idx + 1;
+        }
+        else
+        {
+            quickSort_notail(arr, pivot_idx + 1, ub);
+            ub = pivot_idx - 1;
+        }
     }
-
 }
 
 /*  merge
@@ -141,35 +156,17 @@ void quickSort(long* arr, int size)
 */
 void merge(long* src, long* dest, int lb, int mid, int ub)
 {
-    int ind1 = lb;
-    int ind2 = mid + 1;
-    int ind_dest = 0;
-    long l_val;
-    long u_val;
-    if((ub <= lb) || (mid < lb) || (mid + 1 > ub))
+    int i = lb, j = mid + 1;
+    for (int k = lb; k <= ub; k++)
     {
-        return;
-    }
-    while(ind1 <= mid && ind2 <= ub)
-    {
-        l_val = src[ind1];
-        u_val = src[ind2];
-        (l_val < u_val) ? (dest[ind_dest] = l_val) : (dest[ind_dest] = u_val);
-        ind_dest++;
-        ind1 += l_val <= u_val;
-        ind2 += u_val < l_val;
-    }
-    while(ind1 <= mid)
-    {
-        dest[ind_dest] = src[ind1];
-        ind_dest++;
-        ind1++;
-    }
-    while(ind2 <= ub)
-    {
-        dest[ind_dest] = src[ind2];
-        ind_dest++;
-        ind2++;
+        if(i > mid)
+            dest[k] = src[j++];
+        else if(j > ub)
+            dest[k] = src[i++];
+        else if(src[j] < src[i])
+            dest[k] = src[j++];
+        else
+            dest[k] = src[i++];
     }
 }
 
@@ -204,9 +201,6 @@ void mergeSort(long* src, int size)
 
     
     merge(src, dest, 0, size / 2 - 1, size - 1);
-    for(int x = 0; x < size; x++)
-    {
-        src[x] = dest[x];
-    }
+    copy(dest, src, 0, size - 1);
     free(dest);
 }
